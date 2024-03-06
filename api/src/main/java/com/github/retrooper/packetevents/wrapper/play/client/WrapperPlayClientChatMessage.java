@@ -44,14 +44,14 @@ public class WrapperPlayClientChatMessage extends PacketWrapper<WrapperPlayClien
         super(event);
     }
 
-    public WrapperPlayClientChatMessage(String message, @Nullable MessageSignData messageSignData, @Nullable LastSeenMessages.LegacyUpdate lastSeenMessages) {
+    public WrapperPlayClientChatMessage(String message, MessageSignData messageSignData, @Nullable LastSeenMessages.LegacyUpdate lastSeenMessages) {
         super(PacketType.Play.Client.CHAT_MESSAGE);
         this.message = message;
         this.messageSignData = messageSignData;
         this.legacyLastSeenMessages = lastSeenMessages;
     }
 
-    public WrapperPlayClientChatMessage(String message, @Nullable MessageSignData messageSignData, @Nullable LastSeenMessages.Update lastSeenMessages) {
+    public WrapperPlayClientChatMessage(String message, MessageSignData messageSignData, @Nullable LastSeenMessages.Update lastSeenMessages) {
         super(PacketType.Play.Client.CHAT_MESSAGE);
         this.message = message;
         this.messageSignData = messageSignData;
@@ -64,15 +64,17 @@ public class WrapperPlayClientChatMessage extends PacketWrapper<WrapperPlayClien
         this.message = readString(maxMessageLength);
         if (serverVersion.isNewerThanOrEquals(ServerVersion.V_1_19)) {
             Instant timestamp = readTimestamp();
-            SaltSignature saltSignature = readSaltSignature();
-            this.messageSignData = new MessageSignData(saltSignature, timestamp);
+            this.messageSignData = new MessageSignData(readSaltSignature(), timestamp);
 
             if (serverVersion.isNewerThanOrEquals(ServerVersion.V_1_19_3)) {
                 this.lastSeenMessages = readLastSeenMessagesUpdate();
-            } else if (serverVersion.isNewerThanOrEquals(ServerVersion.V_1_19_1)) {
+            } else {
                 boolean signedPreview = readBoolean();
                 this.messageSignData.setSignedPreview(signedPreview);
-                this.legacyLastSeenMessages = readLegacyLastSeenMessagesUpdate();
+
+                if (serverVersion.isNewerThanOrEquals(ServerVersion.V_1_19_1)) {
+                    this.legacyLastSeenMessages = readLegacyLastSeenMessagesUpdate();
+                }
             }
         }
     }
@@ -85,11 +87,16 @@ public class WrapperPlayClientChatMessage extends PacketWrapper<WrapperPlayClien
             writeTimestamp(messageSignData.getTimestamp());
             writeSaltSignature(messageSignData.getSaltSignature());
 
-            if (serverVersion.isNewerThanOrEquals(ServerVersion.V_1_19_3) && lastSeenMessages != null) {
-                writeLastSeenMessagesUpdate(lastSeenMessages);
-            } else if (serverVersion.isNewerThanOrEquals(ServerVersion.V_1_19_1) && serverVersion.isOlderThanOrEquals(ServerVersion.V_1_19_2) && legacyLastSeenMessages != null) {
+
+            if (serverVersion.isNewerThanOrEquals(ServerVersion.V_1_19_3)) {
+                if (lastSeenMessages != null)
+                    writeLastSeenMessagesUpdate(lastSeenMessages);
+            } else {
                 writeBoolean(messageSignData.isSignedPreview());
-                writeLegacyLastSeenMessagesUpdate(legacyLastSeenMessages);
+
+                if (serverVersion.isNewerThanOrEquals(ServerVersion.V_1_19_1) && legacyLastSeenMessages != null) {
+                    writeLegacyLastSeenMessagesUpdate(legacyLastSeenMessages);
+                }
             }
         }
     }

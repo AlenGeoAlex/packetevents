@@ -32,10 +32,13 @@ import java.util.function.Function;
 public class PacketEventsSettings {
 
     private TimeStampMode timestampMode = TimeStampMode.MILLIS;
-    private boolean readOnlyListeners = false;
+    private boolean defaultReencode = true; // true for backwards compat and more idiot-proof
     private boolean checkForUpdates = true;
+    private boolean downsampleColors = true;
     private boolean bStatsEnabled = true;
     private boolean debugEnabled = false;
+    private boolean fullStackTraceEnabled = false;
+    private boolean kickOnPacketExceptionEnabled = true;
     private Function<String, InputStream> resourceProvider = path -> PacketEventsSettings.class
             .getClassLoader()
             .getResourceAsStream(path);
@@ -59,12 +62,12 @@ public class PacketEventsSettings {
     }
 
     /**
-     * Are the packet listeners all read only?
-     * @param readOnlyListeners Value
+     * Do we re-encode all packets by default?
+     * @param reEncodeByDefault Value
      * @return Settings instance
      */
-    public PacketEventsSettings readOnlyListeners(boolean readOnlyListeners) {
-        this.readOnlyListeners = readOnlyListeners;
+    public PacketEventsSettings reEncodeByDefault(boolean reEncodeByDefault) {
+        this.defaultReencode = reEncodeByDefault;
         return this;
     }
 
@@ -76,6 +79,17 @@ public class PacketEventsSettings {
      */
     public PacketEventsSettings checkForUpdates(boolean checkForUpdates) {
         this.checkForUpdates = checkForUpdates;
+        return this;
+    }
+
+    /**
+     * This decides if PacketEvents should downsample RGB colors on pre-1.16 servers.
+     *
+     * @param downsampleColors Value
+     * @return Settings instance.
+     */
+    public PacketEventsSettings downsampleColors(boolean downsampleColors) {
+        this.downsampleColors = downsampleColors;
         return this;
     }
 
@@ -102,6 +116,28 @@ public class PacketEventsSettings {
     }
 
     /**
+     * This decides if PacketEvents should print packets error stacktrace
+     *
+     * @param fullStackTraceEnabled Value
+     * @return Settings instance.
+     */
+    public PacketEventsSettings fullStackTrace(boolean fullStackTraceEnabled) {
+        this.fullStackTraceEnabled = fullStackTraceEnabled;
+        return this;
+    }
+
+    /**
+     * This decides if PacketEvents should kick the player in case a packet exception occurs.
+     *
+     * @param kickOnPacketExceptionEnabled Value
+     * @return Settings instance.
+     */
+    public PacketEventsSettings kickOnPacketException(boolean kickOnPacketExceptionEnabled) {
+        this.kickOnPacketExceptionEnabled = kickOnPacketExceptionEnabled;
+        return this;
+    }
+
+    /**
      * Some projects may want to implement a CDN with resources like asset mappings
      * By default, all resources are retrieved from the ClassLoader
      *
@@ -115,10 +151,10 @@ public class PacketEventsSettings {
 
     /**
      * Should the packet listeners be read only?
-     * @return Getter for {@link #readOnlyListeners}
+     * @return Getter for {@link #defaultReencode}
      */
-    public boolean shouldListenersReadOnly() {
-        return readOnlyListeners;
+    public boolean reEncodeByDefault() {
+        return defaultReencode;
     }
 
     /**
@@ -128,6 +164,15 @@ public class PacketEventsSettings {
      */
     public boolean shouldCheckForUpdates() {
         return checkForUpdates;
+    }
+
+    /**
+     * Should we downsample RGB colors on pre-1.16 servers?
+     *
+     * @return Getter for {@link #downsampleColors}
+     */
+    public boolean shouldDownsampleColors() {
+        return downsampleColors;
     }
 
 
@@ -147,6 +192,24 @@ public class PacketEventsSettings {
      */
     public boolean isDebugEnabled() {
         return debugEnabled;
+    }
+
+    /**
+     * Should packetevents send packet exception Stacktraces to the console?
+     *
+     * @return Getter for {@link #fullStackTrace}
+     */
+    public boolean isFullStackTraceEnabled() {
+        return fullStackTraceEnabled;
+    }
+
+    /**
+     * Should packetevents kick the player due to an packet exception?
+     *
+     * @return Getter for {@link #kickOnPacketException}
+     */
+    public boolean isKickOnPacketExceptionEnabled() {
+        return kickOnPacketExceptionEnabled;
     }
 
     /**

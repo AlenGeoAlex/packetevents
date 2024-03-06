@@ -25,6 +25,7 @@ import com.github.retrooper.packetevents.protocol.entity.type.EntityTypes;
 import com.github.retrooper.packetevents.protocol.item.ItemStack;
 import com.github.retrooper.packetevents.protocol.item.type.ItemType;
 import com.github.retrooper.packetevents.protocol.nbt.NBTCompound;
+import com.github.retrooper.packetevents.protocol.particle.type.ParticleType;
 import com.github.retrooper.packetevents.protocol.player.GameMode;
 import com.github.retrooper.packetevents.protocol.potion.PotionType;
 import com.github.retrooper.packetevents.protocol.potion.PotionTypes;
@@ -44,11 +45,11 @@ public class SpigotConversionUtil {
     }
 
     public static PotionType fromBukkitPotionEffectType(org.bukkit.potion.PotionEffectType potionEffectType) {
-        return PotionTypes.getById(potionEffectType.getId());
+        return PotionTypes.getById(potionEffectType.getId(), PacketEvents.getAPI().getServerManager().getVersion());
     }
 
     public static org.bukkit.potion.PotionEffectType toBukkitPotionEffectType(PotionType potionType) {
-        return org.bukkit.potion.PotionEffectType.getById(potionType.getId());
+        return org.bukkit.potion.PotionEffectType.getById(potionType.getId(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion()));
     }
 
     public static GameMode fromBukkitGameMode(org.bukkit.GameMode gameMode) {
@@ -140,4 +141,13 @@ public class SpigotConversionUtil {
             return new Dimension(SpigotReflectionUtil.fromMinecraftNBT(nbt));
         }
     }
+
+    public static ParticleType fromBukkitParticle(Enum<?> particle) {
+        return SpigotReflectionUtil.toPacketEventsParticle(particle);
+    }
+
+    public static Enum<?> toBukkitParticle(ParticleType particle) {
+        return SpigotReflectionUtil.fromPacketEventsParticle(particle);
+    }
+
 }

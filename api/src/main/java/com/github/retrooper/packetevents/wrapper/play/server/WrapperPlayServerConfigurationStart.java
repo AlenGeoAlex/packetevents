@@ -1,6 +1,6 @@
 /*
  * This file is part of packetevents - https://github.com/retrooper/packetevents
- * Copyright (C) 2022 retrooper and contributors
+ * Copyright (C) 2023 retrooper and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,13 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.github.retrooper.packetevents.protocol.entity.data.provider;
+package com.github.retrooper.packetevents.wrapper.play.server;
 
-import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
+import com.github.retrooper.packetevents.event.PacketSendEvent;
+import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 
-import java.util.List;
+public class WrapperPlayServerConfigurationStart extends PacketWrapper<WrapperPlayServerConfigurationStart> {
 
-public interface DataProvider {
-    List<EntityData> encode();
-    void decode(List<EntityData> data);
+    public WrapperPlayServerConfigurationStart(PacketSendEvent event) {
+        super(event);
+    }
+
+    public WrapperPlayServerConfigurationStart() {
+        super(PacketType.Play.Server.CONFIGURATION_START);
+    }
 }

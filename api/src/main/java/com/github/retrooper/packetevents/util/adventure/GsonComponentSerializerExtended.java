@@ -22,8 +22,15 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.text.BlockNBTComponent;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.gson.*;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,17 +43,30 @@ public class GsonComponentSerializerExtended implements GsonComponentSerializer 
 
     private final Gson serializer;
     private final UnaryOperator<GsonBuilder> populator;
-    private final boolean downsampleColor;
-    private final boolean emitLegacyHover;
 
     public GsonComponentSerializerExtended(final boolean downsampleColor, final boolean emitLegacyHover) {
-        this.downsampleColor = downsampleColor;
-        this.emitLegacyHover = emitLegacyHover;
-        this.populator = builder -> {
-            builder.registerTypeAdapterFactory(new SerializerFactory(downsampleColor, emitLegacyHover));
-            return builder;
-        };
-        this.serializer = this.populator.apply(new GsonBuilder()).create();
+        if (AdventureReflectionUtil.IS_LEGACY_ADVENTURE) {
+            this.populator = builder -> {
+                builder.registerTypeHierarchyAdapter(Key.class, AdventureReflectionUtil.KEY_SERIALIZER_INSTANCE);
+                builder.registerTypeHierarchyAdapter(Component.class, AdventureReflectionUtil.COMPONENT_SERIALIZER_CREATE.apply(null));
+                builder.registerTypeHierarchyAdapter(Style.class, new Legacy_StyleSerializerExtended(emitLegacyHover));
+                builder.registerTypeAdapter(ClickEvent.Action.class, AdventureReflectionUtil.CLICK_EVENT_ACTION_SERIALIZER_INSTANCE);
+                builder.registerTypeAdapter(HoverEvent.Action.class, AdventureReflectionUtil.HOVER_EVENT_ACTION_SERIALIZER_INSTANCE);
+                builder.registerTypeAdapter(HoverEvent.ShowItem.class, AdventureReflectionUtil.SHOW_ITEM_SERIALIZER_CREATE.apply(null));
+                builder.registerTypeAdapter(HoverEvent.ShowEntity.class, AdventureReflectionUtil.SHOW_ENTITY_SERIALIZER_CREATE.apply(null));
+                builder.registerTypeAdapter(TextColorWrapper.class, TextColorWrapper.Serializer.INSTANCE);
+                builder.registerTypeHierarchyAdapter(TextColor.class, downsampleColor ? AdventureReflectionUtil.TEXT_COLOR_SERIALIZER_DOWNSAMPLE_COLOR_INSTANCE : AdventureReflectionUtil.TEXT_COLOR_SERIALIZER_INSTANCE);
+                builder.registerTypeAdapter(TextDecoration.class, AdventureReflectionUtil.TEXT_DECORATION_SERIALIZER_INSTANCE);
+                builder.registerTypeHierarchyAdapter(BlockNBTComponent.Pos.class, AdventureReflectionUtil.BLOCK_NBT_POS_SERIALIZER_INSTANCE);
+                return builder;
+            };
+        } else {
+            this.populator = builder -> {
+                builder.registerTypeAdapterFactory(new SerializerFactory(downsampleColor, emitLegacyHover));
+                return builder;
+            };
+        }
+        this.serializer = this.populator.apply(new GsonBuilder().disableHtmlEscaping()).create();
     }
 
     @Override
@@ -93,7 +113,7 @@ public class GsonComponentSerializerExtended implements GsonComponentSerializer 
 
     @Override
     public @NotNull Builder toBuilder() {
-        return null; // We don't need to support this
+        throw new UnsupportedOperationException("Builder pattern is not supported."); // We don't need to support this
     }
 
 }

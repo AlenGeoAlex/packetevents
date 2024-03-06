@@ -22,8 +22,6 @@ import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.exception.InvalidHandshakeException;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,7 +50,7 @@ public class EventManager {
                 for (PacketListenerCommon listener : listeners) {
                     try {
                         event.call(listener);
-                    } catch (Throwable t) {
+                    } catch (Exception t) {
                         // ignore handshake exceptions
                         if (t.getClass() != InvalidHandshakeException.class) {
                             PacketEvents.getAPI().getLogger().log(Level.WARNING, "PacketEvents caught an unhandled exception while calling your listener.", t);
@@ -64,7 +62,8 @@ public class EventManager {
                 }
             }
         }
-        if (event instanceof ProtocolPacketEvent && PacketEvents.getAPI().getSettings().shouldListenersReadOnly()) {
+        // For performance reasons, we don't want to re-encode the packet if it's not needed.
+        if (event instanceof ProtocolPacketEvent && !((ProtocolPacketEvent<?>) event).needsReEncode()) {
             ((ProtocolPacketEvent<?>) event).setLastUsedWrapper(null);
         }
 

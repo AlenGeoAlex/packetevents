@@ -30,7 +30,7 @@ import com.github.retrooper.packetevents.protocol.chat.message.ChatMessage_v1_16
 import com.github.retrooper.packetevents.protocol.nbt.NBTCompound;
 import com.github.retrooper.packetevents.protocol.nbt.NBTList;
 import com.github.retrooper.packetevents.protocol.world.Dimension;
-import com.github.retrooper.packetevents.util.AdventureSerializer;
+import com.github.retrooper.packetevents.util.adventure.AdventureSerializer;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import com.github.retrooper.packetevents.wrapper.play.server.*;
 import net.kyori.adventure.text.Component;
@@ -42,7 +42,8 @@ import java.util.UUID;
 
 public class User {
     private final Object channel;
-    private ConnectionState connectionState;
+    private ConnectionState decoderState;
+    private ConnectionState encoderState;
     private ClientVersion clientVersion;
     private final UserProfile profile;
     private int entityId = -1;
@@ -55,7 +56,8 @@ public class User {
                 ConnectionState connectionState, ClientVersion clientVersion,
                 UserProfile profile) {
         this.channel = channel;
-        this.connectionState = connectionState;
+        this.decoderState = connectionState;
+        this.encoderState = connectionState;
         this.clientVersion = clientVersion;
         this.profile = profile;
     }
@@ -69,11 +71,37 @@ public class User {
     }
 
     public ConnectionState getConnectionState() {
-        return connectionState;
+        ConnectionState decoderState = this.decoderState;
+        ConnectionState encoderState = this.encoderState;
+        if (decoderState != encoderState) {
+            throw new IllegalArgumentException("Can't get common connection state: " + decoderState + " != " + encoderState);
+        }
+        return decoderState;
     }
 
     public void setConnectionState(ConnectionState connectionState) {
-        this.connectionState = connectionState;
+        this.setDecoderState(connectionState);
+        this.setEncoderState(connectionState);
+    }
+
+    public ConnectionState getDecoderState() {
+        return this.decoderState;
+    }
+
+    public void setDecoderState(ConnectionState decoderState) {
+        this.decoderState = decoderState;
+        PacketEvents.getAPI().getLogManager().debug(
+                "Transitioned " + this.getName() + "'s decoder into " + decoderState + " state!");
+    }
+
+    public ConnectionState getEncoderState() {
+        return this.encoderState;
+    }
+
+    public void setEncoderState(ConnectionState encoderState) {
+        this.encoderState = encoderState;
+        PacketEvents.getAPI().getLogManager().debug(
+                "Transitioned " + this.getName() + "'s encoder into " + encoderState + " state!");
     }
 
     public ClientVersion getClientVersion() {
@@ -150,7 +178,8 @@ public class User {
     }
 
     public void sendMessage(Component component, ChatType type) {
-        ServerVersion version = PacketEvents.getAPI().getServerManager().getVersion();
+        ServerVersion version = PacketEvents.getAPI().getInjector().isProxy() ? getClientVersion().toServerVersion() :
+                PacketEvents.getAPI().getServerManager().getVersion();
         PacketWrapper<?> chatPacket;
         if (version.isNewerThanOrEquals(ServerVersion.V_1_19)) {
             chatPacket = new WrapperPlayServerSystemChatMessage(false, component);
@@ -174,7 +203,9 @@ public class User {
     }
 
     public void sendTitle(Component title, Component subtitle, int fadeInTicks, int stayTicks, int fadeOutTicks) {
-        boolean modern = PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_17);
+        ServerVersion version = PacketEvents.getAPI().getInjector().isProxy() ? getClientVersion().toServerVersion() :
+                PacketEvents.getAPI().getServerManager().getVersion();
+        boolean modern = version.isNewerThanOrEquals(ServerVersion.V_1_17);
         PacketWrapper<?> animation;
         PacketWrapper<?> setTitle = null;
         PacketWrapper<?> setSubtitle = null;
@@ -242,6 +273,9 @@ public class User {
 
     @Nullable
     public NBTCompound getWorldNBT(String worldName) {
+        if (worldNBT == null) {
+            return null;
+        }
         for (NBTCompound compound : worldNBT) {
             if (compound.getStringTagOrNull("name").getValue().equals(worldName)) {
                 return compound;

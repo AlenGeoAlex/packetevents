@@ -19,6 +19,7 @@
 package com.github.retrooper.packetevents.util;
 
 import com.github.retrooper.packetevents.protocol.player.TextureProperty;
+import com.github.retrooper.packetevents.util.adventure.AdventureSerializer;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -38,7 +39,7 @@ public class MojangAPIUtil {
         String uuidStr = UUIDUtil.toStringWithoutDashes(uuid);
         try {
             List<TextureProperty> textureProperties = new ArrayList<>();
-            URL url = new URL("https://sessionserver.mojang.com/session/minecraft/profile/" + uuidStr);
+            URL url = new URL("https://sessionserver.mojang.com/session/minecraft/profile/" + uuidStr + "?unsigned=false");
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             //Bad request, this UUID is not valid

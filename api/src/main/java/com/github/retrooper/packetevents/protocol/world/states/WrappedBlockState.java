@@ -73,9 +73,14 @@ public class WrappedBlockState {
 
         if (data != null) {
             for (String s : data) {
-                String[] split = s.split("=");
-                StateValue value = StateValue.byName(split[0]);
-                this.data.put(value, value.getParser().apply(split[1].toUpperCase(Locale.ROOT)));
+                try {
+                    String[] split = s.split("=");
+                    StateValue value = StateValue.byName(split[0]);
+                    this.data.put(value, value.getParser().apply(split[1].toUpperCase(Locale.ROOT)));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    PacketEvents.getAPI().getLogManager().warn("Failed to parse block state: " + s);
+                }
             }
         }
 
@@ -93,14 +98,25 @@ public class WrappedBlockState {
 
     @NotNull
     public static WrappedBlockState getByGlobalId(int globalID) {
-        return getByGlobalId(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), globalID);
+        return getByGlobalId(globalID, true);
+    }
+
+    @NotNull
+    public static WrappedBlockState getByGlobalId(int globalID, boolean clone) {
+        return getByGlobalId(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), globalID, clone);
     }
 
     @NotNull
     public static WrappedBlockState getByGlobalId(ClientVersion version, int globalID) {
+        return getByGlobalId(version, globalID, true);
+    }
+
+    @NotNull
+    public static WrappedBlockState getByGlobalId(ClientVersion version, int globalID, boolean clone) {
         if (globalID == 0) return AIR; // Hardcode for performance
         byte mappingsIndex = getMappingsIndex(version);
-        return BY_ID.get(mappingsIndex).getOrDefault(globalID, AIR).clone();
+        final WrappedBlockState state = BY_ID.get(mappingsIndex).getOrDefault(globalID, AIR);
+        return clone ? state.clone() : state;
     }
 
     @NotNull
@@ -110,8 +126,14 @@ public class WrappedBlockState {
 
     @NotNull
     public static WrappedBlockState getByString(ClientVersion version, String string) {
+        return getByString(version, string, true);
+    }
+
+    @NotNull
+    public static WrappedBlockState getByString(ClientVersion version, String string, boolean clone) {
         byte mappingsIndex = getMappingsIndex(version);
-        return BY_STRING.get(mappingsIndex).getOrDefault(string.replace("minecraft:", ""), AIR).clone();
+        final WrappedBlockState state = BY_STRING.get(mappingsIndex).getOrDefault(string.replace("minecraft:", ""), AIR);
+        return clone ? state.clone() : state;
     }
 
     @NotNull
@@ -121,14 +143,19 @@ public class WrappedBlockState {
 
     @NotNull
     public static WrappedBlockState getDefaultState(ClientVersion version, StateType type) {
+        return getDefaultState(version, type, true);
+    }
+
+    @NotNull
+    public static WrappedBlockState getDefaultState(ClientVersion version, StateType type, boolean clone) {
         if (type == StateTypes.AIR) return AIR;
         byte mappingsIndex = getMappingsIndex(version);
         WrappedBlockState state = DEFAULT_STATES.get(mappingsIndex).get(type);
         if (state == null) {
-            PacketEvents.getAPI().getLogger().warning("Default state for " + type.getName() + " is null. Returning AIR");
+            PacketEvents.getAPI().getLogger().config("Default state for " + type.getName() + " is null. Returning AIR");
             return AIR;
         }
-        return state.clone();
+        return clone ? state.clone() : state;
     }
 
     private static byte getMappingsIndex(ClientVersion version) {
@@ -150,8 +177,17 @@ public class WrappedBlockState {
             return 7;
         } else if (version.isOlderThanOrEquals(ClientVersion.V_1_19_1)) {
             return 8;
+        } else if (version.isOlderThanOrEquals(ClientVersion.V_1_19_3)) {
+            return 9;
+        } else if (version.isOlderThanOrEquals(ClientVersion.V_1_19_4)) {
+            return 10;
+        } else if (version.isOlderThanOrEquals(ClientVersion.V_1_20)) {
+            return 11;
+        } else if (version.isOlderThanOrEquals(ClientVersion.V_1_20_2)) {
+            return 12;
         }
-        return 9;
+        // TODO UPDATE increment index (and add previous above)
+        return 13;
     }
 
     private static void loadLegacy() {
@@ -262,10 +298,8 @@ public class WrappedBlockState {
 
                     type = StateTypes.getByName(blockString);
 
-                    // TODO: Proper 1.20 support for experimental worlds
                     if (type == null) {
-                        type = StateTypes.AIR;
-                        //PacketEvents.getAPI().getLogger().warning("Unknown block type: " + fullBlockString);
+                        PacketEvents.getAPI().getLogger().warning("Unknown block type: " + fullBlockString);
                     }
                 }
 
@@ -1100,6 +1134,36 @@ public class WrappedBlockState {
     public void setBloom(Bloom bloom) {
         checkIfCloneNeeded();
         data.put(StateValue.BLOOM, bloom);
+        checkIsStillValid();
+    }
+
+    public boolean isCracked() {
+        return (boolean) data.get(StateValue.CRACKED);
+    }
+
+    public void setCracked(boolean cracked) {
+        checkIfCloneNeeded();
+        data.put(StateValue.CRACKED, cracked);
+        checkIsStillValid();
+    }
+
+    public boolean isCrafting() {
+        return (boolean) data.get(StateValue.CRAFTING);
+    }
+
+    public void setCrafting(boolean crafting) {
+        checkIfCloneNeeded();
+        data.put(StateValue.CRAFTING, crafting);
+        checkIsStillValid();
+    }
+
+    public TrialSpawnerState getTrialSpawnerState() {
+        return (TrialSpawnerState) data.get(StateValue.TRIAL_SPAWNER_STATE);
+    }
+
+    public void setTrialSpawnerState(TrialSpawnerState trialSpawnerState) {
+        checkIfCloneNeeded();
+        data.put(StateValue.TRIAL_SPAWNER_STATE, trialSpawnerState);
         checkIsStillValid();
     }
 

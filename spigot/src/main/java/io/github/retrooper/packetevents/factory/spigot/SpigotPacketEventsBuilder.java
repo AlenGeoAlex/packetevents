@@ -39,11 +39,13 @@ import io.github.retrooper.packetevents.manager.protocol.ProtocolManagerImpl;
 import io.github.retrooper.packetevents.manager.server.ServerManagerImpl;
 import io.github.retrooper.packetevents.netty.NettyManagerImpl;
 import io.github.retrooper.packetevents.util.BukkitLogManager;
+import io.github.retrooper.packetevents.util.FoliaCompatUtil;
 import io.github.retrooper.packetevents.util.SpigotReflectionUtil;
 import io.github.retrooper.packetevents.util.protocolsupport.ProtocolSupportUtil;
 import io.github.retrooper.packetevents.util.viaversion.CustomPipelineUtil;
 import io.github.retrooper.packetevents.util.viaversion.ViaVersionUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -83,13 +85,13 @@ public class SpigotPacketEventsBuilder {
             private final NettyManager nettyManager = new NettyManagerImpl();
             private final SpigotChannelInjector injector = new SpigotChannelInjector();
             private final LogManager logManager = new BukkitLogManager();
-            private final AtomicBoolean loaded = new AtomicBoolean(false);
-            private final AtomicBoolean initialized = new AtomicBoolean(false);
+            private boolean loaded;
+            private boolean initialized;
             private boolean lateBind = false;
 
             @Override
             public void load() {
-                if (!loaded.getAndSet(true)) {
+                if (!loaded) {
                     //Resolve server version and cache
                     String id = plugin.getName().toLowerCase();
                     PacketEvents.IDENTIFIER = "pe-" + id;
@@ -116,6 +118,8 @@ public class SpigotPacketEventsBuilder {
                         injector.inject();
                     }
 
+                    loaded = true;
+
                     //Register internal packet listener (should be the first listener)
                     //This listener doesn't do any modifications to the packets, just reads data
                     getEventManager().registerListener(new InternalBukkitPacketListener());
@@ -124,23 +128,23 @@ public class SpigotPacketEventsBuilder {
 
             @Override
             public boolean isLoaded() {
-                return loaded.get();
+                return loaded;
             }
 
             @Override
             public void init() {
                 //Load if we haven't loaded already
                 load();
-                if (!initialized.getAndSet(true)) {
+                if (!initialized) {
                     if (settings.shouldCheckForUpdates()) {
                         getUpdateChecker().handleUpdateCheck();
                     }
 
                     if (settings.isbStatsEnabled()) {
                         Metrics metrics = new Metrics((JavaPlugin) plugin, 11327);
-                        //Just to have an idea what versions of packetevents people use
+                        //Just to have an idea of which versions of packetevents people use
                         metrics.addCustomChart(new Metrics.SimplePie("packetevents_version", () -> {
-                            return getVersion().toString() + "-beta";//TODO Cut off "-beta" once 2.0 releases
+                            return getVersion().toString();
                         }));
                     }
 
@@ -153,13 +157,22 @@ public class SpigotPacketEventsBuilder {
                                 injector.inject();
                             }
                         };
-                        Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, lateBindTask);
+                        FoliaCompatUtil.runTaskOnInit(plugin, lateBindTask);
                     }
 
                     // Let people override this, at their own risk
                     if (!"true".equalsIgnoreCase(System.getenv("PE_IGNORE_INCOMPATIBILITY"))) {
                         checkCompatibility();
                     }
+
+                    //Map player instances to the already registered channels (likely a reload)
+                    for (Player player : Bukkit.getOnlinePlayers()) {
+                        User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
+                        SpigotChannelInjector injector = (SpigotChannelInjector) PacketEvents.getAPI().getInjector();
+                        injector.updatePlayer(user, player);
+                    }
+
+                    initialized = true;
                 }
             }
 
@@ -199,12 +212,12 @@ public class SpigotPacketEventsBuilder {
 
             @Override
             public boolean isInitialized() {
-                return initialized.get();
+                return initialized;
             }
 
             @Override
             public void terminate() {
-                if (initialized.getAndSet(false)) {
+                if (initialized) {
                     //Uninject the injector if needed(depends on the injector implementation)
                     injector.uninject();
                     for (User user : ProtocolManager.USERS.values()) {
@@ -212,6 +225,7 @@ public class SpigotPacketEventsBuilder {
                     }
                     //Unregister all listeners. Because if we attempt to reload, we will end up with duplicate listeners.
                     getEventManager().unregisterAllListeners();
+                    initialized = false;
                 }
             }
 

@@ -42,6 +42,7 @@ public enum StateValue {
     DISTANCE("distance", Integer::parseInt),
     DOWN("down", Boolean::parseBoolean),
     DRAG("drag", Boolean::parseBoolean),
+    DUSTED("dusted", Integer::parseInt),
     EAST("east", East::valueOf),
     EGGS("eggs", Integer::parseInt),
     ENABLED("enabled", Boolean::parseBoolean),
@@ -49,6 +50,7 @@ public enum StateValue {
     EYE("eye", Boolean::parseBoolean),
     FACE("face", Face::valueOf),
     FACING("facing", BlockFace::valueOf),
+    FLOWER_AMOUNT("flower_amount", Integer::parseInt),
     HALF("half", Half::valueOf),
     HANGING("hanging", Boolean::parseBoolean),
     HAS_BOOK("has_book", Boolean::parseBoolean),
@@ -102,7 +104,10 @@ public enum StateValue {
     UP("up", Boolean::parseBoolean),
     VERTICAL_DIRECTION("vertical_direction", VerticalDirection::valueOf),
     WATERLOGGED("waterlogged", Boolean::parseBoolean),
-    WEST("west", West::valueOf);
+    WEST("west", West::valueOf),
+    CRACKED("cracked", Boolean::parseBoolean),
+    CRAFTING("crafting", Boolean::parseBoolean),
+    TRIAL_SPAWNER_STATE("trial_spawner_state", TrialSpawnerState::valueOf);
 
     private final String name;
     private final Function<String, Object> parser;

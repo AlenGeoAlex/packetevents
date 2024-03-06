@@ -52,6 +52,7 @@ public abstract class ProtocolPacketEvent<T> extends PacketEvent implements Play
     private PacketWrapper<?> lastUsedWrapper;
     private List<Runnable> postTasks = null;
     private boolean cloned;
+    private boolean needsReEncode = PacketEvents.getAPI().getSettings().reEncodeByDefault();
 
     public ProtocolPacketEvent(PacketSide packetSide, Object channel,
                                User user, T player, Object byteBuf,
@@ -77,16 +78,17 @@ public abstract class ProtocolPacketEvent<T> extends PacketEvent implements Play
             throw new PacketProcessException("Failed to read the Packet ID of a packet. (Size: " + size + ")");
         }
         ClientVersion version = serverVersion.toClientVersion();
-        this.packetType = PacketType.getById(packetSide, user.getConnectionState(),
+        ConnectionState state = packetSide == PacketSide.CLIENT ? user.getDecoderState() : user.getEncoderState();
+        this.packetType = PacketType.getById(packetSide, state,
                 version, packetID);
         if (this.packetType == null) {
-            // mojang fucked up and keeps sending disconnect packets in the wrong protocol state
+            // mojang messed up and keeps sending disconnect packets in the wrong protocol state
             if (PacketType.getById(packetSide, ConnectionState.PLAY, version, packetID) == PacketType.Play.Server.DISCONNECT) {
                 throw new InvalidDisconnectPacketSend();
             }
-            throw new PacketProcessException("Failed to map the Packet ID " + packetID + " to a PacketType constant. Bound: " + packetSide.getOpposite() + ", Connection state: " + user.getConnectionState() + ", Server version: " + serverVersion.getReleaseName());
+            throw new PacketProcessException("Failed to map the Packet ID " + packetID + " to a PacketType constant. Bound: " + packetSide.getOpposite() + ", Connection state: " + user.getDecoderState() + ", Server version: " + serverVersion.getReleaseName());
         }
-        this.connectionState = user.getConnectionState();
+        this.connectionState = state;
     }
 
     public ProtocolPacketEvent(int packetID, PacketTypeCommon packetType, ServerVersion serverVersion, Object channel,
@@ -98,9 +100,20 @@ public abstract class ProtocolPacketEvent<T> extends PacketEvent implements Play
         this.byteBuf = byteBuf;
         this.packetID = packetID;
         this.packetType = packetType;
-        this.connectionState = user.getConnectionState();
+
+        this.connectionState = (packetType != null && packetType.getSide() == PacketSide.SERVER)
+                ? user.getEncoderState() : user.getDecoderState();
         cloned = true;
     }
+
+    public void markForReEncode(boolean needsReEncode) {
+        this.needsReEncode = needsReEncode;
+    }
+
+    public boolean needsReEncode() {
+        return needsReEncode;
+    }
+
 
     public boolean isClone() {
         return cloned;
@@ -156,7 +169,6 @@ public abstract class ProtocolPacketEvent<T> extends PacketEvent implements Play
         this.byteBuf = byteBuf;
     }
 
-    @Deprecated
     public int getPacketId() {
         return packetID;
     }

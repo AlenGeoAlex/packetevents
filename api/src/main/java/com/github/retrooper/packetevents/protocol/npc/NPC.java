@@ -20,6 +20,7 @@ package com.github.retrooper.packetevents.protocol.npc;
 
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.manager.server.ServerVersion;
+import com.github.retrooper.packetevents.protocol.entity.type.EntityTypes;
 import com.github.retrooper.packetevents.protocol.item.ItemStack;
 import com.github.retrooper.packetevents.protocol.player.*;
 import com.github.retrooper.packetevents.protocol.world.Location;
@@ -86,10 +87,17 @@ public class NPC {
         PacketEvents.getAPI().getProtocolManager().sendPacket(channel, playerInfo);
 
         //TODO Later if we want entity metadata, its not supported on newer server versions though(confirm if its mandatory on older versions)
-        WrapperPlayServerSpawnPlayer spawnPlayer = new WrapperPlayServerSpawnPlayer(getId(),
-                getProfile().getUUID(),
-                getLocation());
-        PacketEvents.getAPI().getProtocolManager().sendPacket(channel, spawnPlayer);
+
+        PacketWrapper<?> spawnPacket;
+        if (PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_20_2)) {
+            spawnPacket = new WrapperPlayServerSpawnEntity(getId(), getProfile().getUUID(), EntityTypes.PLAYER, getLocation(), getLocation().getYaw(), 0, null);
+        }
+        else {
+            spawnPacket = new WrapperPlayServerSpawnPlayer(getId(),
+                    getProfile().getUUID(),
+                    getLocation());
+        }
+        PacketEvents.getAPI().getProtocolManager().sendPacket(channel, spawnPacket);
 
         //Create team
         if (getNameColor() != null || getPrefixName() != null
@@ -191,7 +199,7 @@ public class NPC {
         setDisplayPing(ping);
         for (Object channel : channels) {
             PacketWrapper<?> playerInfo;
-            if (PacketEvents.getAPI().getServerManager().getVersion().isOlderThanOrEquals(ServerVersion.V_1_19_3)) {
+            if (PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_19_3)) {
                 playerInfo = new WrapperPlayServerPlayerInfoUpdate(WrapperPlayServerPlayerInfoUpdate.Action.UPDATE_LATENCY, getModernPlayerInfoData());
             }
             else {
@@ -253,7 +261,7 @@ public class NPC {
         }
     }
 
-    public void updateNameTag(NPC npc) {
+    public void updateNameTag() {
         for (Object channel : channels) {
             //Destroy team
             WrapperPlayServerTeams removeTeam =
@@ -262,8 +270,8 @@ public class NPC {
                             Optional.empty());
             PacketEvents.getAPI().getProtocolManager().sendPacket(channel, removeTeam);
 
-            if (npc.getNameColor() != null || npc.getPrefixName() != null
-                    || npc.getSuffixName() != null) {
+            if (this.getNameColor() != null || this.getPrefixName() != null
+                    || this.getSuffixName() != null) {
                 PacketEvents.getAPI().getProtocolManager().sendPacket(channel, generateTeamsData());
             }
         }
@@ -460,5 +468,9 @@ public class NPC {
 
     public void setLocation(Location location) {
         this.location = location;
+    }
+
+    public Set<Object> getChannels() {
+        return channels;
     }
 }

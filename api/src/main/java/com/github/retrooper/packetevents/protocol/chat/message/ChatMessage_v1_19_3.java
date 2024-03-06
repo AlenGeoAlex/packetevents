@@ -2,43 +2,36 @@ package com.github.retrooper.packetevents.protocol.chat.message;
 
 import com.github.retrooper.packetevents.protocol.chat.LastSeenMessages;
 import com.github.retrooper.packetevents.protocol.chat.filter.FilterMask;
+import com.github.retrooper.packetevents.util.adventure.AdventureSerializer;
 import net.kyori.adventure.text.Component;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
-
-public class ChatMessage_v1_19_3 extends ChatMessage {
-    UUID senderUUID;
+//We'll extend ChatMessage_v1_16 for now, hopefully no breaking changes in the future
+public class ChatMessage_v1_19_3 extends ChatMessage_v1_16 {
     int index;
     byte[] signature;
     String plainContent;
     Instant timestamp;
     long salt;
-    LastSeenMessages lastSeenMessages;
-    Component unsignedChatContent;
+    LastSeenMessages.Packed lastSeenMessagesPacked;
+    @Nullable Component unsignedChatContent;
     FilterMask filterMask;
     ChatMessage_v1_19_1.ChatTypeBoundNetwork chatType;
 
-    public ChatMessage_v1_19_3(UUID senderUUID, int index, byte[] signature, String plainContent, Instant timestamp, long salt, LastSeenMessages lastSeenMessages, Component unsignedChatContent, FilterMask filterMask, ChatMessage_v1_19_1.ChatTypeBoundNetwork chatType) {
-        super(unsignedChatContent, chatType.getType());
-        this.senderUUID = senderUUID;
+    public ChatMessage_v1_19_3(UUID senderUUID, int index, byte[] signature, String plainContent, Instant timestamp, long salt, LastSeenMessages.Packed lastSeenMessagesPacked, @Nullable Component unsignedChatContent, FilterMask filterMask, ChatMessage_v1_19_1.ChatTypeBoundNetwork chatType) {
+        super(Component.text(plainContent), chatType.getType(), senderUUID);
         this.index = index;
         this.signature = signature;
         this.plainContent = plainContent;
         this.timestamp = timestamp;
         this.salt = salt;
-        this.lastSeenMessages = lastSeenMessages;
+        this.lastSeenMessagesPacked = lastSeenMessagesPacked;
         this.unsignedChatContent = unsignedChatContent;
         this.filterMask = filterMask;
         this.chatType = chatType;
-    }
-
-    public UUID getSenderUUID() {
-        return senderUUID;
-    }
-
-    public void setSenderUUID(UUID senderUUID) {
-        this.senderUUID = senderUUID;
     }
 
     public int getIndex() {
@@ -55,6 +48,17 @@ public class ChatMessage_v1_19_3 extends ChatMessage {
 
     public void setSignature(byte[] signature) {
         this.signature = signature;
+    }
+
+    @Override
+    public Component getChatContent() {
+        return Component.text(plainContent);
+    }
+
+    @Deprecated
+    @Override
+    public void setChatContent(Component chatContent) {
+        throw new UnsupportedOperationException("PacketEvents is not able to serialize components to plain-text. Please use the #setPlainContent instead to update the content.");
     }
 
     public String getPlainContent() {
@@ -81,19 +85,19 @@ public class ChatMessage_v1_19_3 extends ChatMessage {
         this.salt = salt;
     }
 
-    public LastSeenMessages getLastSeenMessages() {
-        return lastSeenMessages;
+    public LastSeenMessages.Packed getLastSeenMessagesPacked() {
+        return lastSeenMessagesPacked;
     }
 
-    public void setLastSeenMessages(LastSeenMessages lastSeenMessages) {
-        this.lastSeenMessages = lastSeenMessages;
+    public void setLastSeenMessagesPacked(LastSeenMessages.Packed lastSeenMessagesPacked) {
+        this.lastSeenMessagesPacked = lastSeenMessagesPacked;
     }
 
-    public Component getUnsignedChatContent() {
-        return unsignedChatContent;
+    public Optional<Component> getUnsignedChatContent() {
+        return Optional.ofNullable(unsignedChatContent);
     }
 
-    public void setUnsignedChatContent(Component unsignedChatContent) {
+    public void setUnsignedChatContent(@Nullable Component unsignedChatContent) {
         this.unsignedChatContent = unsignedChatContent;
     }
 
