@@ -50,7 +50,8 @@ public class InternalBukkitListener implements Listener {
             //Check if it is a fake connection...
             if (!FakeChannelUtil.isFakeChannel(channel)) {
                 //Kick them, if they are not a fake player.
-                FoliaCompatUtil.runTaskForEntity(player, plugin, () -> player.kickPlayer("PacketEvents 2.0 failed to inject"), null, 0);
+//                FoliaCompatUtil.runTaskForEntity(player, plugin, () -> player.kickPlayer("PacketEvents 2.0 failed to inject"), null, 0);
+                plugin.getLogger().warning("PacketEvents 2.0 failed to inject on player "+player.getName()+". This modified fork of packet events would refrain from kicking them!");
             }
             return;
         }
